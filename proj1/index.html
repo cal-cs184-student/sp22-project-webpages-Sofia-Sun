@@ -1,7 +1,227 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns="http://www.w3.org/1999/html" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">Project 1: Rasterizer</h1>
+<h2 align="middle">Sofia Sun, CS184</h2>
+
+<p>
+
+<h2 align="middle">Section I: Rasterization</h2>
+
+<h3 align="middle">Part 1: Rasterizing single-color triangles</h3>
+
+<p> In this part, a triangle's three vertices' screen-space (x,y) coordinates and color are given. <br>
+  The goal is to color pixels with the given rgb color if it is inside the triangle.<br>
+  To implement this, I work with vector arithmetics as follows:<br>
+  <blockquote> 1) Make 3 vertices as 3D vectors and rearrange them into counter-clockwise for later arithmetics to orientate appropriately.<br>
+    2) Get 3 edges from 3 vertices and then get normals to each edge of the triangle pointing inwards. Here, 3D vectors are needed (instead of 2D) in order to perform cross product between edge and unit vector in positive Z direction and find inward norms.<br>
+    3) According to the spec I place the sample point in the center of the pixel by rounding float x, y coordinates to integers and adding 0.5 to each.<br>
+    4) As learned in lecture, I perform 3 line tests (right-hand rule) by calculating dot product between an examining point vector (with respect to a vertex) and the corresponding normal.<br>
+    5) If the examining point has all 3 lines tests greater than or equal to zero, it's located inside the triangle and can be colored.
+  </blockquote>
+  To try rasterize faster, I pre-calculate a narrower range of examining pixels to decrease number of iterations/testing needed.
+  </p>
+  <p> Following pictures are results of Task 1, aliasing such as jaggies and discontinuities are observed when zoomed in.</p>
+  <div align="middle">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <img src="images/flower1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Flowers</figcaption>
+        </td>
+        <td>
+          <img src="images/tri1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Triangles: with obvious aliasing(jaggies, discontinuity)</figcaption>
+        </td>
+        <td>
+          <img src="images/tri1-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Aliasing: jaggies, discontinuity</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+<h3 align="middle">Part 2: Antialiasing triangles</h3>
+
+  <p> To implement supersampling, I scaled up the "sample_buffer" and construct a new mapping from screen-space to "sample_buffer" and back from "sample_buffer" to "frame_buffer".<br>
+    Each pixel in Task 1 is further divided into "sample_rate" number of pixels,
+    To implement this, I changed and added the following to the implementation of Task 1:<br>
+  <blockquote> 1) For each of the examining pixel, use sub-index i and j to double loop from 0 to st = sqrt(sample_rate), compute: sx = x+(0.5+i)/st, sy = y+(0.5+j)/st.<br>
+    2) Make sx and sy into a 3D vector and perform 3 line tests as Task 1. <br>
+    3) Use 0 <= si < sample_rate to fill the up-scaled "sample_buffer" by the provided color: sample_buffer[y * width * sample_rate + x*sample_rate + si] = color. <br>
+    3.1) Similarly in rasterize_point, populate "sample_rate" number of pixels in large "sample_buffer" by the same color(for later taking average to work appropriately). <br>
+    4) Then take average of "sample_rate" number of colors stored in the large "sample_buffer" and put the average color into "frame_buffer".
+  </blockquote>
+  </p>
+  <p> Following pictures are results of Task 2, jaggies, discontinuous effects are reduced (higher the sample rate, less the aliasing with more blurry).</p>
+  <div align="middle">
+    <table style="width=100%">
+        <td>
+          <img src="images/tri2.png" align="middle" width="400px"/>
+          <figcaption align="middle">Triangle: with sample rate = 16, smoother edges and better continuity compared to Task 1. </figcaption>
+        </td>
+      <tr>
+        <td>
+          <img src="images/cube2-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Cubes: no supersampling. </figcaption>
+        </td>
+        <td>
+          <img src="images/cube2.png" align="middle" width="400px"/>
+          <figcaption align="middle">cubes: sample rate = 16. </figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+
+<h3 align="middle">Part 3: Transforms</h3>
+  <p> This part is done by making the transformation matrices learned in class into Matrix3x3 objects. </p>
+  <div align="middle">
+    <td>
+      <img src="images/bot3.png" align="middle" width="400px"/>
+      <figcaption align="middle">Robot</figcaption>
+    </td>
+  </div>
+
+<h2 align="middle">Section II: Sampling</h2>
+
+<h3 align="middle">Part 4: Barycentric coordinates</h3>
+  <p> To calculate the barycentric coordinates, I used matrix multiplication to solve the three equations. <br>
+      Make the following matrix and vectors to compute barycentric coordinates: <br>
+      <blockquote>
+        Matrix3x3 A (x0, x1, x2, y0, y1, y2, 1, 1, 1). <br>
+        Vector 3D b (sx, sy, 1): sx, sy are coordinates for sub-pixels from Task 2, b.z = 1 ensures the three weights add up to 1. <br>
+        weights = A.inv() * b.
+      </blockquote>
+      Weights can be used to calculate corresponding color.
+  </p>
+<div align="middle">
+  <td>
+    <img src="images/colorwheel4.png" align="middle" width="400px"/>
+    <figcaption align="middle">Color Wheel</figcaption>
+  </td>
+</div>
+
+
+<h3 align="middle">Part 5: "Pixel sampling" for texture mapping</h3>
+<p> Part 1. sample_nearest: <br>
+    <blockquote>
+    A UV normalized coordinate and a level is given. The mipmap can be accessed as well. <br>
+    First rescale by dimensions of the mipmap. Then round it to get the closest texel.
+    </blockquote>
+    Part 2. sample_bilinear: <br>
+    <blockquote>
+    Four nearest texels needed for bilinear sampling, so use floor and ceil functions to get them. <br>
+    As learned in lecture, perform 2 horizontal Lerp (linear interpolation) and 1 vertical lerp to get the final color.
+    </blockquote>
+  In general, bilinear sampling produces a smoother image than nearest pixel sampling. Supersampling smooths/blurs both sampling methods.
+</p>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/map5n1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Map: nearest sampling, sample rate = 1</figcaption>
+      </td>
+      <td>
+        <img src="images/map5n16.png" align="middle" width="400px"/>
+        <figcaption align="middle">Map: nearest sampling, sample rate = 16</figcaption>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        <img src="images/map5b1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Map: bilinear sampling, sample rate = 1</figcaption>
+      </td>
+      <td>
+        <img src="images/map5b16.png" align="middle" width="400px"/>
+        <figcaption align="middle">Map: bilinear sampling, sample rate = 16</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h3 align="middle">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+<p>
+
+  Fill SampleParams:
+<blockquote>
+  Done in rasterize_textured_triangle, similar to the matrix arithmetic in Task 4 (Barycentric) with appropriate offset in x and y.<br>
+  Dot weights with u and v respectively to get p_dx_uv and p_dy_uv.
+</blockquote>
+
+  Compute level D:
+<blockquote>
+  From lecture, we get method to calculate level D = log2(L)<br>
+  L = max( sqrt((du/dx)^2 + (dv/dx)^2), sqrt((du/dy)^2 + (dv/dy)^2) ) <==> the norm of 2D vectors: <br>
+  d1 = (mipmap scaled) sp.p_dx_uv - sp.p_uv , d2 = (mipmap scaled) sp.p_dy_uv - sp.p_uv <br>
+  If the calculation D is outside of the mipmap ( < 0 or > mipmap.size()-1 ), clamp D to the nearest valid level.
+</blockquote>
+
+  Function: sample():
+<blockquote>
+  According to the spec, assign appropriate pixel sampling and level sampling combinations. <br>
+  for bilinear level sampling, calculate distances to closest levels and used them as weights to compute colors. <br>
+  Take care of on edge levels cases (if both distances are 0, then use color from the closest level).
+</blockquote>
+</p>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/Berkeley6L0n.png" align="middle" width="400px"/>
+        <figcaption align="middle">Berkeley: L_ZERO, P_NEAREST</figcaption>
+      </td>
+      <td>
+        <img src="images/Berkeley6Nn.png" align="middle" width="400px"/>
+        <figcaption align="middle">Berkeley: L_NEAREST, P_NEAREST</figcaption>
+      </td>
+      <td>
+        <img src="images/Berkeley6Bn.png" align="middle" width="400px"/>
+        <figcaption align="middle">Berkeley: L_LINEAR, P_NEAREST</figcaption>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        <img src="images/Berkeley6L0b.png" align="middle" width="400px"/>
+        <figcaption align="middle">Berkeley: L_ZERO, P_LINEAR</figcaption>
+      </td>
+      <td>
+        <img src="images/Berkeley6Nb.png" align="middle" width="400px"/>
+        <figcaption align="middle">Berkeley: L_NEAREST, P_LINEAR</figcaption>
+      </td>
+      <td>
+        <img src="images/Berkeley6Bb.png" align="middle" width="400px"/>
+        <figcaption align="middle">Berkeley: L_LINEAR, P_LINEAR</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+</body>
 </html>
