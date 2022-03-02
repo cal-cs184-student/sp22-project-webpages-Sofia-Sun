@@ -1,0 +1,262 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <style>
+    body {
+      padding: 100px;
+      width: 1000px;
+      margin: auto;
+      text-align: left;
+      font-weight: 300;
+      font-family: 'Open Sans', sans-serif;
+      color: #121212;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Source Sans Pro', sans-serif;
+    }
+  </style>
+  <title>CS 184 Mesh Editor</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+  <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2020</h1>
+  <h1 align="middle">Project 2: Mesh Editor</h1>
+  <h2 align="middle">Sofia Sun</h2>
+
+  <br><br>
+
+  <div>
+
+    <h2 align="middle">Overview</h2>
+    <p>This project is exploring topics on geometric modeling. I first build Bezier curves and surfaces using de Casteljau algorithm,
+      then I learned to manipulate triangle meshes through half-edge data structures(flipping and splitting edges),
+      finally, I am able to implement loop subdivision using the functions built in previous parts.</p>
+
+    <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+    <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+
+    <p> De Casteljau's algorithm is a way of using linear interpolation on given control points until we end up with the 1 point on the bezier curve.<br>
+      The whole process is recursive, so to implementation this, I need to complete one layer of operation by taking consecutive control points, perform linear interpolation on them to get a point in the next level.
+      As a result, return all next level control points. This process end when only 1 control point is given(which is the point on curve.)
+    </p>
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q1_1.png" align="middle" width="500px" />
+            <figcaption align="middle">Levels of Evaluation.</figcaption>
+          </td>
+          <td>
+            <img src="images/Q1_2.png" align="middle" width="500px" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="images/Q1_3.png" align="middle" width="500px" />
+          </td>
+          <td>
+            <img src="images/Q1_4.png" align="middle" width="500px" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="images/Q1_5.png" align="middle" width="500px" />
+          </td>
+          <td>
+            <img src="images/Q1_6.png" align="middle" width="500px" />
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/Q1_c.png" align="middle" width="500px" />
+            <figcaption align="middle">With Curve.</figcaption>
+          </td>
+          <td>
+            <img src="images/Q1_dt.png" align="middle" width="500px" />
+            <figcaption align="middle">Control points dragged, toggle t.</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
+    <p>This part is using de Casteljau's algorithm dimension by dimension to get the Bezier surfaces. <br>
+      As learned in lecture, we compute 1D bezier curves along u direction, collect the resulting points,
+      and then repeat 1D evaluation on resulting points along v direction.</p>
+    <div align="middle">
+      <table style="width=100%">
+        <td>
+          <img src="images/Q2.png" align="middle" width="500px" />
+          <figcaption align="middle">teapot(bez).</figcaption>
+        </td>
+      </table>
+    </div>
+
+    <h2 align="middle">Section II: Sampling</h2>
+
+    <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
+    <p>This part is to compute the normal vector at a vertex by taking the area-weighted average of the normals of neighboring triangles, then normalizing.<br>
+      Start from getting the half-edge of current vertex. Notice there is a normal() associated with each face,
+      which sums up the cross product of two vectors generated from each vertex on the face and normalize the sum.<br>
+      So I used the functionality to get normal of each faces associated with the given vertex, sum them up and normalize it at the end to get the desired normal.</p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q3_f.png" align="middle" width="500px" />
+            <figcaption align="middle">Teapot(dae) Flat shading</figcaption>
+          </td>
+          <td>
+            <img src="images/Q3_p.png" align="middle" width="500px" />
+            <figcaption align="middle">Teapot(dae) Phone shading</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h3 align="middle">Part 4: Half-edge flip</h3>
+    <p> Flipping an edge does not involve adding or deleting mesh element, yet requires reassignments of many pointers/links.<br>
+      The key to correctly implement the flip function, it is crucial to keep a schematic naming style which helps with debugging massively.<br>
+      I reference my variable names with the picture on spec, and used the given helper function setNeighbors(...) for all halfedges involved.<br>
+      During my implementation, I had bugs due to the face assignment after the flip. Assigning half-edge to incorrect face will result in holes in the displaying object after certain number of flip.<br>
+      This is where the diagram helps a lot as I can easily figure out which halfedge belongs to which face using the picture.</p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q3_f.png" align="middle" width="500px" />
+            <figcaption align="middle">Teapot(dae) original</figcaption>
+          </td>
+          <td>
+            <img src="images/Q4_flip.png" align="middle" width="500px" />
+            <figcaption align="middle">Teapot(dae) some edges with flips</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h3 align="middle">Part 5: Half-edge split</h3>
+    <p>Split edge involves adding new elements into the mesh and reassign pointers/linkages.<br>
+      Similar to flip, I first define and name variables in diagram before split.<br>
+    <div align="middle">
+      <td>
+        <img src="images/note5.png" align="middle" width="400px"/>
+        <figcaption align="middle">Illustration diagram for edge splitting.</figcaption>
+      </td>
+    </div>
+      Then, I add all new elements: 1 vertex, 2 faces, 3 edges, 6 half-edges.<br>
+      Finally, carefully follow the diagram above to re-assign neighbours and linkages in the mesh. (similar to Part4)<br>
+      (To avoid deleting elements, I reused the splitting edge, half-edges, and faces, re-assign them accordingly)
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q3_f.png" align="middle" width="500px" />
+            <figcaption align="middle">Teapot(dae) original</figcaption>
+          </td>
+          <td>
+            <img src="images/Q5_split.png" align="middle" width="500px" />
+            <figcaption align="middle">Teapot(dae) some edges with splits</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
+    <p>(The instruction on spec is very detailed. The loop traversal of edges and vertices are also guided by the primer.)
+    This part involves using the part 4 and 5 implementations.
+    Yet this time, the new vertices created by split edge is put at a better weighted place on splitting edge compare to previously at midpoint of the edge.<br>
+    To do this, I followed the 5 steps provided:
+    <blockquote>
+      1. Compute new positions for all the vertices in the input mesh, using the Loop subdivision rule: (1-n*u)*v->position + u*sum_neighbour_position<br>
+      store resulting position in v->newPosition. All vertex are old vertex of the mesh, so set v->isNew = false.<br>
+      (sum_neighbour_position: looping through the half-edges of each vertex to get to the neighbouring vertex, then sum up the neighbouring vertices' position)<br>
+      2. Compute the updated vertex positions associated with edges. <br>
+      Loop through edges of the mesh, name variables corresponding to spec's diagram, then compute and store the following result:<br>
+      e->newPosition = (3 * (a->position + b->position) + (c->position + d->position))/8;<br>
+      Note: rounding errors may occur(), so it's important to either use decimal points or adjust adding/multipling order.<br>
+      3. Split every edge in the mesh, in any order. <br>
+      To only split old edges, take advantage of the fact that new edges added into mesh is stacked in the end, I loop through first n_edge = mesh.nEdges() of edges before doing split.<br>
+      Then to perform split that is able to do subdivision, I added extra lines in splitEdge() formula in part 5, new_vertex.isNew = true, and 2 newly added edges' isNew is also set to true.<br>
+      [debugging experience]: For the original e0 in the split function that is being split to two edges, both shorter edges are still OLD edges, even though one of them is new edge element.<br>
+      As splitEdge() returns the new added vertex, set: "new_v->newPosition = edge_split->newPosition" This will shift the new vertex position from midpoint to the weighted position computed in step 2.<br>
+      4. Flip any new edge that connects an old and new vertex. This becomes easy to achieve as we assigned isNew variables for edge and vertex elements, loop through mesh and check condition before flip. <br>
+      5. Iterate over all vertices in the mesh to copy the new vertex positions into final v->position.
+  </blockquote>
+    </p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q6_1.png" align="middle" width="500px" />
+            <figcaption align="middle">Original.</figcaption>
+          </td>
+          <td>
+            <img src="images/Q6_3.png" align="middle" width="500px" />
+            <figcaption align="middle">Loop subdivision 3 times, smoother.</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <p> The cow after loop subdivision becomes smoother, more rounded.</p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q6_c1.png" align="middle" width="500px" />
+            <figcaption align="middle">Original.</figcaption>
+          </td>
+          <td>
+            <img src="images/Q6_c2.png" align="middle" width="500px" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="images/Q6_c3.png" align="middle" width="500px" />
+          </td>
+          <td>
+            <img src="images/Q6_c4.png" align="middle" width="500px" />
+          </td>
+        </tr>
+      </table>
+    </div>
+    <p> The Asymmetric affect comes from the fact that the original cube has each face with 1 diagonal edge, which makes each face asymmetric. after repeated subdivisions.<br>
+      Pre-process the cube by splitting the diagonal edge of each face once can make the result symmetric.</p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q6_p1.png" align="middle" width="400px" />
+            <figcaption align="middle">Preprocessed Original.</figcaption>
+          </td>
+          <td>
+            <img src="images/Q6_p2.png" align="middle" width="400px" />
+          </td>
+          <tr>
+          <td>
+            <img src="images/Q6_p3.png" align="middle" width="400px" />
+            <figcaption align="middle">Symmetric.</figcaption>
+          </td>
+        </tr>
+        </tr>
+      </table>
+    </div>
+</body>
+
+</html>
