@@ -16,45 +16,129 @@
 <body>
 <br />
 <h1 align="middle">Assignment 3: PathTracer</h1>
-    <h2 align="middle">Your Name</h2>
+    <h2 align="middle">Sofia Sun</h2>
 
     <div class="padded">
-        <p>Use this section to write an overview of the assignment. All of the text in your write-up should be <em>in your own words</em>. If you need to add additional HTML features to this document, you can search the <a href="http://www.w3schools.com/">http://www.w3schools.com/</a> website for instructions. To edit the HTML, you can just copy and paste existing chunks and fill in the text and image file names appropriately.</p>
-        <o>The website writeup is intended to be a self-contained walkthrough of the assignment: we want this to be a piece of work which showcases your understanding of relevant concepts through both mesh images as well as written explanations about what you did to complete each part of the assignment. Try to be as clear and organized as possible when writing about your own output files or extensions to the assignment. We want to understand what you've achieved and how you've done it!</p> 
-        <p>If you are well-versed in web development, feel free to ditch this template and make a better looking page. Just make sure that you include all the components as we've laid them out here. </p>
+        <p>Overview:
+            This project is adding more to the 3-1 path-tracer project.
+            I chose to do part 1 and 2 of this project.
+            These two parts are adding/modifying reflection and refraction(to render mirror and glass materials).
+            Furthermore, we are able to render micro-facet surfaces after the implementation of part 2.
+        </p>
 
-    <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
-        <p>Describe what you did in Part 1. etc...</p>
+    <h2 align="middle">Part 1: Mirror and Glass Materials</h2>
+        <b>"Show a sequence of six images of scene CBspheres.dae rendered with max_ray_depth set to 0, 1, 2, 3, 4, 5, and 100. The other settings should be at least 64 samples per pixel and 4 samples per light."</b><br>
         <div align="center">
             <table style="width=100%">
                 <tr>
-                    <td align="middle">
-                    <img src="images/example_image.png" width="480px" />
-                    <figcaption align="middle">Results Caption: my bunny is the bounciest bunny</figcaption>
+                    <td>
+                    <img src="images/m0.png" width="300px" />
+                    <figcaption align="middle"> max_ray_depth = 0 </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/m1.png" width="300px" />
+                        <figcaption align="middle"> max_ray_depth = 1 </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/m2.png" width="300px" />
+                        <figcaption align="middle"> max_ray_depth = 2 </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/m3.png" width="300px" />
+                        <figcaption align="middle"> max_ray_depth = 3 </figcaption>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td>
+                        <img src="images/m4.png" width="300px" />
+                        <figcaption align="middle"> max_ray_depth = 4 </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/m5.png" width="300px" />
+                        <figcaption align="middle"> max_ray_depth = 5 </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/m100.png" width="300px" />
+                        <figcaption align="middle"> max_ray_depth = 100 </figcaption>
+                    </td>
                 </tr>
             </table>
         </div>
-        <p>Here is an example of how to include a simple formula:</p>
-        <p align="middle"><pre align="middle">a^2 + b^2 = c^2</pre></p>
-        <p>or, alternatively, you can include an SVG image of a LaTex formula.</p>
-        <p>This time it's your job to copy-paste in the rest of the sections :)</p>
+        <b>"Point out the new multibounce effects that appear in each image."</b><br>
+        <b>"Explain how these bounce numbers relate to the particular effects that appear."</b><br>
+        <p>At depth 0, we can only see the light directly comes from the light source. So the rest of the box is completely dark.<br>
+            At depth 1, we can also see lights that reflected once, so the room is "lit up". The spheres are mostly black except the reflection of light source. We don't see other colors on the spheres because with m = 2, lights that are reflected the second time from the box or refracted out of the glass cannot come to our eyes.<br>
+            At depth 2, we can now see the reflection of the environment box, observe the top box and mirror ball are "colored" now. This colorization needs at least 2 bounces since a ray need to go from: source -> environment box(one-bounce) -> mirror ball/box-top(two-bounce) -> our eyes. The glass ball remains dark with very little color on the edge. This is because most light rays that go into the box(refraction) are still inside the ball(or goes to other non-window directions yet to come back) for m = 2, so we only see a few of them around the edge yet most of the ball is still dark.<br>
+            At depth 3, we can now see refractions. A ray can travel 3 bounces now, so we may have path like: source -> colorful object(one-bounce) -> glass ball(two-refract-enter) -> glass ball(three-refract-exit) -> our eyes. Paths like this will help us see colors on glass ball.<br>
+            We can also see the highlight under the glass sphere. This focus effect is generated by two refractions and one reflection inside the glass ball. The path would be like: source -> glass refract(one-refract-enter) → glass reflect(two-refract-exit) -> bright spot(three-bounce) → our eyes.<br>
+            At depth 4, we can now see a brighter spot on the blue wall at the right bottom corner and the reflection of glass ball on the other mirror ball becomes colorful. The first effect is caused by internal reflections inside the glass ball: path = source → glass ball(one-refract-enter) → glass ball(two-internal-reflect) → glass ball(four-refract-exit) → the corner(five-bounce) → our eyes.<br>
+            In general as depth increases, image becomes brighter as more light rays bounces around and make it to our eyes.
+        </p>
 
+        <h2 align="middle">Part 2: Microfacet Material</h2>
+        <b>"Show a sequence of 4 images of scene CBdragon_microfacet_au.dae rendered with α set to 0.005, 0.05, 0.25 and 0.5.
+            The other settings should be at least 128 samples per pixel and 1 samples per light.
+            The number of bounces should be at least 5.
+            Describe the differences between different images."</b><br>
+        The material tends to diffuse for higher alpha, and are more glossy for smaller alpha. diffused reflect lights in all directions so it results in less, brighter shadows in general. Thus, the dragon seems brighter than glossy ones.
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/a005.png" width="400px" />
+                        <figcaption align="middle"> alpha = 0.005 </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/a05.png" width="400px" />
+                        <figcaption align="middle"> alpha = 0.05 </figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="images/a25.png" width="400px" />
+                        <figcaption align="middle"> alpha = 0.25 </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/a5.png" width="400px" />
+                        <figcaption align="middle"> alpha = 0.5 </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-
-    <h2 align="middle">A Few Notes On Webpages</h2>
-        <p>Here are a few problems students have encountered in the past. You will probably encounter these problems at some point, so don't wait until right before the deadline to check that everything is working. Test your website on the instructional machines early!</p>
-        <ul>
-        <li>Your main report page should be called index.html.</li>
-        <li>Be sure to include and turn in all of the other files (such as images) that are linked in your report!</li>
-        <li>Use only <em>relative</em> paths to files, such as <pre>"./images/image.jpg"</pre>
-        Do <em>NOT</em> use absolute paths, such as <pre>"/Users/student/Desktop/image.jpg"</pre></li>
-        <li>Pay close attention to your filename extensions. Remember that on UNIX systems (such as the instructional machines), capitalization matters. <pre>.png != .jpeg != .jpg != .JPG</pre>
-        <li>Be sure to adjust the permissions on your files so that they are world readable. For more information on this please see this tutorial: <a href="http://www.grymoire.com/Unix/Permissions.html">http://www.grymoire.com/Unix/Permissions.html</a></li>
-        <li>And again, test your website on the instructional machines early!</li>
+        <b>"Show two images of scene CBbunny_microfacet_cu.dae rendered using cosine hemisphere sampling (default) and your importance sampling.
+            The sampling rate should be fixed at 64 samples per pixel and 1 samples per light.
+            The number of bounces should be at least 5.
+            Briefly discuss their difference."</b><br>
+        Importance sampling produces much less noisy image as it converges much better than uniform hemisphere sampling under same parameters.
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/bunnydefault.png" width="400px" />
+                        <figcaption align="middle"> default hemisphere sampling </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/bunnymicro.png" width="400px" />
+                        <figcaption align="middle"> importance sampling </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <b>"Show at least one image with some other conductor material, replacing eta and k.
+            Tell us what kind of material your parameters correspond to."</b><br>
+        eta: [3.9186 4.0903 4.5288], k: [0.0236 0.041535 0.11463]
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/silicon_dragon.png" width="440px" />
+                        <figcaption align="middle"> Material: silicon </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <b>Website: https://cal-cs184-student.github.io/sp22-project-webpages-Sofia-Sun/</b>
 </div>
 </body>
 </html>
-
-
-
-
