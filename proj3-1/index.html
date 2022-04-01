@@ -20,13 +20,12 @@
 
     <div class="padded">
         <p><b>Overview: </b></p>
-        <p>A self-contained walkthrough of the assignment:
-            we want this to be a piece of work which showcases your understanding
-            of relevant concepts through both mesh images
-            as well as written explanations about what you did to complete each part of the assignment.
-            Try to be as clear and organized as possible when writing about your own output files
-            or extensions to the assignment.
-            We want to understand what you've achieved and how you've done it!</p>
+        <p>This project we implement path-tracer to render objects. 
+        Using the Ray class and implementing intersect functions
+            in order to trace the camera ray and light path.
+            We implement direct and indirect illumination, which is calculating zero,one,multiple-bounces and sum them up approporiately to get the final pixel color.
+
+We also include several optimization methods. The first one is to organize the primitives using a hierarchical tree of bounding boxes, which allow us to skip many intersection test if the ray is not intersecting with the box; the second optimization is to incorporating adaptive sampling, stop generating rays if the pixel have already likely converged.</p>
 
     <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
         <b>"Walk through the ray generation and primitive intersection parts of the rendering pipeline":</b>
