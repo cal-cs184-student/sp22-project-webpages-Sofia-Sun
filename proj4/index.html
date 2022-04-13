@@ -1,7 +1,350 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 4 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2017</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Sofia Sun, CS184-agj</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p> This project is simulating the cloth behaviour under free fall action with/without pinned points.
+    After implementing this project's 1-4 parts, it can simulate cloth falling on to a plane, a sphere, and folding itself (self-collision).
+    Part 5 is building shaders, I enjoyed this part a lot. An interesting fact is that diffusing shader implementation helped me find a bug all the way back in part 1(where I populated point masses in a wrong order)...which takes quite a long time to debug.
+    It is also interesting to fiddle around with the parameters like height, normal, damping etc. which will have various effects when using different shaders.
+    Part 6 is also an interesting part to explore, I combined various shaders together and find that displacement mapping and mirror shader goes together very well, producing an aluminum foil like cloth.</p>
+
+<h2 align="middle">Part I: Masses and springs</h2>
+<p> This part is populating PointMasses and adding spring relations between pairs of point masses.
+    Note the order of populating masses matter, as it is in row major order, so we should iterate height in outer loop and width in inner loop
+    (Ps: this is the bug I was taking about). </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/No_Shearing.png" width="350px" />
+                    <figcaption align="middle"> (1) without any shearing constraints </figcaption>
+                </td>
+                <td>
+                    <img src="images/Only_Shearing.png" width="350px" />
+                    <figcaption align="middle"> (2) with only shearing constraints </figcaption>
+                </td>
+                <td>
+                    <img src="images/All.png" width="350px" />
+                    <figcaption align="middle"> (3) with all constraints </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+<h2 align="middle">Part II: Simulation via numerical integration</h2>
+ * below conclusions are referring to simulations done with pinned2.json <br>
+    1. ks value is controlling the tightness of the "spring" between point masses: <br>
+    &emsp;<b>Low ks</b>: the cloth is more loosely held together by springs (yet not too loosely due to the constraint on position update).
+    The rest state has more distortion observed between the 2 pinned points due to gravity. Also, it comes to rest slower because loose springs bounce more, rather unsettling.          <br>
+    &emsp;<b>High ks</b>: the cloth is held together more tightly, falling more like a sheet of paper.
+    The rest state has less distortion due to gravity because tighter springs provide more tension to hold point masses closer together.
+    It comes to rest faster, as tighter springs bounce less.<br>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/ks1.png" width="400px" />
+                    <figcaption align="middle"> low ks = 1 </figcaption>
+                </td>
+                <td>
+                    <img src="images/ks10000.png" width="400px" />
+                    <figcaption align="middle"> high ks = 10000 </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    2. density is controlling how heavy the cloth is: <br>
+    &emsp;<b>Low density</b>: cloth is less heavy, so overall the distortion of cloth in rest state is small (less gravity pulling cloth down, also less spring to allow cloth be pulled down much).
+    Also the cloth length at rest state is shorter.<br>
+    &emsp;<b>High density</b>: cloth is more heavy, so overall the distortion of cloth in rest state is larger (more gravity pulling cloth down, also more spring to allow cloth be pulled down). Notice the constraint on position update is also holding cloth together and preventing it to distort too much.
+    The cloth length at rest state is stretched out longer by gravity.<br>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/dense1.png" width="400px" />
+                    <figcaption align="middle"> low density = 1 </figcaption>
+                </td>
+                <td>
+                    <img src="images/dense100.png" width="400px" />
+                    <figcaption align="middle"> high density = 100 </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    3. damping is controlling the speed of energy loss:<br>
+    &emsp;<b>Low damping</b>: little energy is lost during the falling action, the cloth fall fast and even swing back and forth erratically due to the gravitational energy converted to kinetic energy. At the same time, the springs are stretched more during the falling, make the cloth seems to be very "jumpy".<br>
+    &emsp;<b>High damping</b>: more energy is lost during the falling, the cloth fall very slowly and more steady than before. The rest state stays the same as with low damping, but the springs are not stretched as much during the falling.      <br>
+
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/d0s.png" width="400px" />
+                    <figcaption align="middle"> damping = 0 </figcaption>
+                </td>
+                <td>
+                    <img src="images/d0e.png" width="400px" />
+                    <figcaption align="middle"> damping = 0 after a long time </figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="images/d1s.png" width="400px" />
+                    <figcaption align="middle"> damping = 1 </figcaption>
+                </td>
+                <td>
+                    <img src="images/d1e.png" width="400px" />
+                    <figcaption align="middle"> damping = 1 after a long time </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+<h2 align="middle">Part III: Handling collisions with other objects</h2>
+    As ks value increases, the cloth becomes more and more "stiff". <br>
+    ks = 500 cloth cover and fits the shape of sphere better than ks = 5000 which is then better than ks = 50000.<br>
+    This is because higher ks results in tighter springs to hold cloth into place(originally flat planer), combating the gravity that is trying to pull cloth down to fit the sphere shape.
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td>
+                <img src="images/ks500.png" width="350px" />
+                <figcaption align="middle"> ks = 500 </figcaption>
+            </td>
+            <td>
+                <img src="images/ks5000.png" width="350px" />
+                <figcaption align="middle"> ks = 5000 </figcaption>
+            </td>
+            <td>
+                <img src="images/ks50000.png" width="350px" />
+                <figcaption align="middle"> ks = 50000 </figcaption>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<br>
+    I used texture mapping to show the color.
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/peace.png" width="400px" />
+                    <figcaption align="middle"> peacefully on the plane </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+<h2 align="middle">Part IV: Handling self-collisions</h2>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/s1.png" width="350px" />
+                    <figcaption align="middle"> start fall </figcaption>
+                </td>
+                <td>
+                    <img src="images/s2.png" width="350px" />
+                    <figcaption align="middle"> folding </figcaption>
+                </td>
+                <td>
+                    <img src="images/s3.png" width="350px" />
+                    <figcaption align="middle"> come to rest </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    Ks: ks controls the stiffness of "springs".<br>
+    &emsp;With low ks, cloth are more flexible and can fold more (observe small and many folds). <br>
+    &emsp;With high ks, cloth are more stiff and fold less (observe large and less folds).
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/smallfold.png" width="350px" />
+                    <figcaption align="middle"> ks=1 </figcaption>
+                </td>
+                <td>
+                    <img src="images/largefold.png" width="350px" />
+                    <figcaption align="middle"> ks=10000 </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    Density: density controls how heavy the cloth is.<br>
+    &emsp;With low density, less gravitational force act on cloth, less force pressing the "springs" and hence the cloth folds peacefully (result is flatter and faster to rest).<br>
+    &emsp;With high density, more gravitational force act on cloth, and springs are pressed and hence bounced a lot. The cloth folds more, observe small and many folds, long time taken to come to rest. Yet observe the fold thickness (the curved part) is smaller due to the cloth being heavier(so may have a flatter folded cloth given having the same amount of folds).
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/lighter.png" width="350px" />
+                    <figcaption align="middle"> density = 1 </figcaption>
+                </td>
+                <td>
+                    <img src="images/heavier.png" width="350px" />
+                    <figcaption align="middle"> density = 100 </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+<h2 align="middle">Part V: Shaders</h2>
+    A shader program is a program that takes in a vertex or a triangle to be rendered, perform corresponding shader computations and output the resulting color to the GPU.<br>
+    The vertex shader apply transforms to the input vertex according to camera angels. It gives the result to the fragment shader and the GPU though gl_Position. The fragment shader then use the information to compute a color for the input vertex.<br>
+    Thus together, vertex and fragment shaders create a shader program that, knowing information like vertex position, normal and light position, can render different materials with various colors.
+    <br>
+    The Blinn-Phong shading model is a specular model that combines ambient, diffuse, and specular reflected lights to produce the final color. <br>
+    Therefore, it produces an effect in-between diffused material and mirror, making the cloth "shiny". The cloth is more mirror-like as half vector comes closer to the normal, and more diffuse if further away.<br>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/ambient.png" width="350px" />
+                    <figcaption align="middle"> Ambient only </figcaption>
+                </td>
+                <td>
+                    <img src="images/diffuse.png" width="350px" />
+                    <figcaption align="middle"> Diffuse only </figcaption>
+                </td>
+                <td>
+                    <img src="images/specular.png" width="350px" />
+                    <figcaption align="middle"> Specular only </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <b>Custom texture: Rose</b>
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <img src="images/rose1.png" width="450px" />
+                    <figcaption align="middle"> Initial state </figcaption>
+                </td>
+                <td>
+                    <img src="images/rose2.png" width="450px" />
+                    <figcaption align="middle"> Rest state </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <b>Bump & Displacement Mapping:</b>
+    * bump keeps the shape of the sphere whereas displacement (with large height value) distort the sphere shape.
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <img src="images/bumpbrick.png" width="450px" />
+                    <figcaption align="middle"> Bump </figcaption>
+                </td>
+                <td>
+                    <img src="images/bumpbrick1.png" width="450px" />
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="images/dispbrick.png" width="450px" />
+                    <figcaption align="middle"> Displacement </figcaption>
+                </td>
+                <td>
+                    <img src="images/disbrick1.png" width="450px" />
+                </td>
+            </tr>
+        </table>
+    </div>
+<br>
+    From the pictures below: <br>
+    A more coarse mesh makes the displacement to perform worse(less sphere-like). It under-samples the texture, meaning it is lacking in vertices to sample the jump in height in the texture.
+    In comparison, more coarse mesh has less effect on the bump render here because the texture is mostly uniform except for brick pattern jumps,
+    so bump shader is able to interpolate the color even with less sample vertices.
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <img src="images/lb.png" width="450px" />
+                    <figcaption align="middle"> Bump less coarseness </figcaption>
+                </td>
+                <td>
+                    <img src="images/ld.png" width="450px" />
+                    <figcaption align="middle"> Displacement less coarseness </figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="images/mb.png" width="450px" />
+                    <figcaption align="middle"> Bump more coarseness </figcaption>
+                </td>
+                <td>
+                    <img src="images/md.png" width="450px" />
+                    <figcaption align="middle"> Displacement more coarseness </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <b>Mirror shader:</b>
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <img src="images/ms.png" width="450px" />
+                    <figcaption align="middle"> Mirror sphere </figcaption>
+                </td>
+                <td>
+                    <img src="images/mc.png" width="450px" />
+                    <figcaption align="middle"> Mirror cloth on sphere </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+<h2 align="middle">Part VI: Displaced Mirror</h2>
+    <p>I made a custom shader by combining displacement mapping and mirror shader.
+        I fiddle around with density and ks to make the cloth less dense and more stiff. I set height to 0.1 to make wrinkles. </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="images/foil.png" width="400px" />
+                    <figcaption align="middle"> Aluminum foil like cloth </figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <b>Website: https://cal-cs184-student.github.io/sp22-project-webpages-Sofia-Sun/</b>
+</body>
 </html>
